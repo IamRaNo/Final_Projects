@@ -394,20 +394,174 @@ group by churn;
 select churn,  
     min(tenure) as min_tenure,
     max(tenure) as max_tenure,
-    round(avg(tenure),2) as avertenure_tenure, 
+    round(avg(tenure),2) as average_tenure, 
     round(std(tenure),2) as std_tenure
 from customers
 group by churn;
 # There is no specific distinction can be made based on tenure colum
 
 
+select churn,  
+    min(frequency) as min_frequency,
+    max(frequency) as max_frequency,
+    round(avg(frequency),2) as average_frequency, 
+    round(std(frequency),2) as std_frequency
+from customers
+group by churn;
+# No specific distinction can be made by just using frequency column
 
 
+select churn,  
+    min(payment_delay) as min_payment_delay,
+    max(payment_delay) as max_payment_delay,
+    round(avg(payment_delay),2) as average_payment_delay, 
+    round(std(payment_delay),2) as std_payment_delay
+from customers
+group by churn;
+# Payment delay under 20 days likely to stay, but delay after 20 days is more likely to churn
+# Payment delay of churned customers are spreaded.
 
 
+select churn,  
+    min(spend) as min_spend,
+    max(spend) as max_spend,
+    round(avg(spend),2) as average_spend, 
+    round(std(spend),2) as std_spend
+from customers
+group by churn;
+# Spending less than 500 is likely to churn
+# Average payment is higher is more likely to stay
+# Not churned customers have a small spread, that too on higher side
+# No such conclusion can be made on maximum spend
 
-select * from customers;
+
+select churn,  
+    min(last_interaction) as min_last_interaction,
+    max(last_interaction) as max_last_interaction,
+    round(avg(last_interaction),2) as average_last_interaction, 
+    round(std(last_interaction),2) as std_last_interaction
+from customers
+group by churn;
+# No conclusion can be made just based on last_interaction
 
 
-alter table customers
-add column age_group;
+-- With Cat to Cat column
+select churn,gender, 
+    count(gender) as `count`,
+    concat(round((100*(count(gender)/sum(count(gender)) over (partition by gender))),2),"%") as percentage_over_gender_classes
+from customers
+group by churn,gender;
+# Females have more churning rate, double than staying
+# Males have kind of same churn rate and staying rate
+
+
+select churn,support_calls, 
+    count(support_calls) as `count`,
+    concat(round((100*(count(support_calls)/sum(count(support_calls)) over (partition by support_calls))),2),"%") as percentage_over_support_calls_classes
+from customers
+group by churn,support_calls;
+# Support calls over 6 leads to churned customers
+# Support calls less than 4 means there are chances of staying more than leaving
+
+
+select churn,subscription, 
+    count(subscription) as `count`,
+    concat(round((100*(count(subscription)/sum(count(subscription)) over (partition by subscription))),2),"%") as percentage_over_subscription_classes
+from customers
+group by churn,subscription;
+# We can not distinguish churned customers based on subscription
+
+
+select churn,contract, 
+    count(contract) as `count`,
+    concat(round((100*(count(contract)/sum(count(contract)) over (partition by contract))),2),"%") as percentage_over_contract_classes
+from customers
+group by churn,contract;
+# All monthly contract customers have churned
+
+
+select churn,age_bins, 
+    count(age_bins) as `count`,
+    concat(round((100*(count(age_bins)/sum(count(age_bins)) over (partition by age_bins))),2),"%") as percentage_over_age_bins_classes
+from customers
+group by churn,age_bins;
+# All 55+ aged customers have churned
+
+
+select churn,tenure_bins, 
+    count(tenure_bins) as `count`,
+    concat(round((100*(count(tenure_bins)/sum(count(tenure_bins)) over (partition by tenure_bins))),2),"%") as percentage_over_tenure_bins_classes
+from customers
+group by churn,tenure_bins;
+# For all tenure group, the chances of churn is higher than chances of stay
+
+
+select churn,frequency_bins, 
+    count(frequency_bins) as `count`,
+    concat(round((100*(count(frequency_bins)/sum(count(frequency_bins)) over (partition by frequency_bins))),2),"%") as percentage_over_frequency_bins_classes
+from customers
+group by churn,frequency_bins;
+# Less usage frequency leads to high rate of churn
+# High usage frequency does not gurantee stay
+
+
+select churn,payment_delay_bins, 
+    count(payment_delay_bins) as `count`,
+    concat(round((100*(count(payment_delay_bins)/sum(count(payment_delay_bins)) over (partition by payment_delay_bins))),2),"%") as percentage_over_payment_delay_bins_classes
+from customers
+group by churn,payment_delay_bins;
+# Payment delay over hald a month means there is more chance of churn than stay
+
+
+select churn,spend_bins, 
+    count(spend_bins) as `count`,
+    concat(round((100*(count(spend_bins)/sum(count(spend_bins)) over (partition by spend_bins))),2),"%") as percentage_over_spend_bins_classes
+from customers
+group by churn,spend_bins;
+# Spend less than 400 leads to churn only
+# Payment more than 700 have higher chance of staying than leaving
+
+
+select churn,last_interaction_bins, 
+    count(last_interaction_bins) as `count`,
+    concat(round((100*(count(last_interaction_bins)/sum(count(last_interaction_bins)) over (partition by last_interaction_bins))),2),"%") as percentage_over_last_interaction_bins_classes
+from customers
+group by churn,last_interaction_bins;
+# Last interaction 15-30 means there is high chance of churn
+
+
+-- ==========================================
+-- Multivariate Analysis
+-- ==========================================
+
+
+-- which age group of females are churning more?
+select age_bins,churn,
+concat(round(100*(count(*)/sum(count(*)) over(partition by age_bins)),2),'%')
+from customers
+where gender= 'Female'
+group by age_bins,churn;
+# All age group of females are churning more than staying.
+
+
+-- for each age group, which gender is churning more?
+select churn,age_bins,gender,count(gender) as `count`,round(
+        100 * count(*) 
+        / sum(count(*)) over(partition by age_bins, gender),
+        2
+    ) as percent_within_gender_and_age
+from customers
+group by churn,age_bins,gender
+order by age_bins,`count`;
+
+
+-- for each tenure group, what is the average frequency for churned and non churned custoemrs?
+-- for each frequency group, what is the average tenure for churned and non churned customers?
+-- for each subscription,contract what is the churned and non churned customers as percentage of overall customers?
+-- what is the average payment delay for each last interaction group for churned and non churned customers?
+-- what is the average spend value for each subscription for churned and non churned customers?
+-- for each age group, what is the average spend for churned and non churned customers?
+-- what is the average frequncy for each age group for churned and non churned customers?
+-- for each support calls, what is the average age for churned and non churned customers?
+-- for each spend group, what is the average payment delay for churned and non churned customers?
+-- what is the average spend per contract for churned and non churned customers?
