@@ -115,9 +115,6 @@ alter table cabs
 modify total_amount double;
 
 
-select * from cabs;
-
-
 alter table cabs
 modify payment_method varchar(50);
 update cabs
@@ -130,6 +127,121 @@ set payment_method =
     when payment_method = 5 then 'unknown'
     when payment_method = 6 then 'void trip'
     end;
+
+
+alter table cabs
+modify rate_code varchar(50);
+
+
+update cabs
+set rate_code = 
+    case
+        when rate_code = 1 then 'standard'
+        when rate_code = 2 then 'airport'
+        when rate_code = 3 then 'connaught place'
+        when rate_code = 4 then 'noida'
+        when rate_code = 5 then 'negotiated fare'
+        when rate_code = 6 then 'pooled ride'
+        else 'others'
+    end;
+
+
+select * from cabs;
+
+
+select count(distinct vendor_id) as vendor_id,
+    count(distinct pickup_loc) as pickup_loc,
+    count(distinct drop_loc) as drop_loc,
+    count(distinct mta_tax) as mta_tax,
+    count(distinct toll_amount) as toll_amount,
+    count(distinct payment_method) as payment_method,
+    count(distinct rate_code) as rate_code,
+    count(distinct extra_charges) as extra_charges
+from cabs;
+
+
+select * from cabs;
+
+
+select sum(id is null) as id,
+sum(vendor_id is null) as vendor_id,
+sum(pickup_loc is null) as pick_loc,
+sum(drop_loc is null) as drop_loc,
+sum(driver_tip is null) as driver_tip,
+sum(mta_tax is null) as mta_tax,
+sum(distance is null) as distance,
+sum(pick_time is null) as pick_time,
+sum(drop_time is null) as drop_time,
+sum(passenger_nums is null) as passanger_num,
+sum(toll_amount is null) as toll_amount,
+sum(payment_method is null ) as payment_method,
+sum(rate_code is null) as rate_code,
+sum(stored_flag is null) as stored_flag,
+sum(extra_charges is null) as extra_charges,
+sum(improvement_charge is null) as improvement_charge,
+sum(total_amount is null) as total_amount
+from cabs;
+
+
+delete from cabs
+    where
+    pickup_loc is null;
+
+
+select * from cabs;
+
+
+select distinct vendor_id from cabs;
+
+select distinct mta_tax from cabs;
+
+update cabs
+set mta_tax = 0
+    where mta_tax is null;
+
+
+select min(distance) as minimum, max(distance) as maximum from cabs;
+
+
+select min(passenger_nums) as minimum, max(passenger_nums) as maximum from cabs;
+
+
+select min(toll_amount) as minimum, max(toll_amount) as maximum from cabs;
+
+
+
+select distinct payment_method from cabs;
+
+
+select distinct rate_code from cabs;
+
+select distinct stored_flag from cabs;
+
+
+select min(extra_charges) as charge,min(improvement_charge) as improve , min(total_amount) as amount from cabs;
+
+
+select * from cabs;
+
+select sum(id is null) as id,
+sum(vendor_id is null) as vendor_id,
+sum(pickup_loc is null) as pick_loc,
+sum(drop_loc is null) as drop_loc,
+sum(driver_tip is null) as driver_tip,
+sum(mta_tax is null) as mta_tax,
+sum(distance is null) as distance,
+sum(pick_time is null) as pick_time,
+sum(drop_time is null) as drop_time,
+sum(passenger_nums is null) as passanger_num,
+sum(toll_amount is null) as toll_amount,
+sum(payment_method is null ) as payment_method,
+sum(rate_code is null) as rate_code,
+sum(stored_flag is null) as stored_flag,
+sum(extra_charges is null) as extra_charges,
+sum(improvement_charge is null) as improvement_charge,
+sum(total_amount is null) as total_amount
+from cabs;
+
 
 
 -- ==========================================
