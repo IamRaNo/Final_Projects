@@ -529,39 +529,9 @@ from customers
 group by churn,last_interaction_bins;
 # Last interaction 15-30 means there is high chance of churn
 
-
+select * from customers;
 -- ==========================================
 -- Multivariate Analysis
 -- ==========================================
 
 
--- which age group of females are churning more?
-select age_bins,churn,
-concat(round(100*(count(*)/sum(count(*)) over(partition by age_bins)),2),'%')
-from customers
-where gender= 'Female'
-group by age_bins,churn;
-# All age group of females are churning more than staying.
-
-
--- for each age group, which gender is churning more?
-select churn,age_bins,gender,count(gender) as `count`,round(
-        100 * count(*) 
-        / sum(count(*)) over(partition by age_bins, gender),
-        2
-    ) as percent_within_gender_and_age
-from customers
-group by churn,age_bins,gender
-order by age_bins,`count`;
-
-
--- for each tenure group, what is the average frequency for churned and non churned custoemrs?
--- for each frequency group, what is the average tenure for churned and non churned customers?
--- for each subscription,contract what is the churned and non churned customers as percentage of overall customers?
--- what is the average payment delay for each last interaction group for churned and non churned customers?
--- what is the average spend value for each subscription for churned and non churned customers?
--- for each age group, what is the average spend for churned and non churned customers?
--- what is the average frequncy for each age group for churned and non churned customers?
--- for each support calls, what is the average age for churned and non churned customers?
--- for each spend group, what is the average payment delay for churned and non churned customers?
--- what is the average spend per contract for churned and non churned customers?
