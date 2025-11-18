@@ -399,6 +399,54 @@ from cabs
 group by extra_charges
 order by `total_count` desc;
 
+select
+pickup_loc,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by pickup_loc
+order by `total_count` desc
+limit 10;
+
+select
+drop_loc,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by drop_loc
+order by `total_count` desc
+limit 10;
+
+with duplicate as(
+    select 'driver_tip' as col, driver_tip as val from cabs
+    union all
+    select 'distance',distance from cabs
+    union all
+    select 'toll_amount',toll_amount from cabs
+    union all
+    select 'total_amount',total_amount from cabs
+) select 
+col,
+max(val) as max_val, 
+min(val) as min_val, 
+round(avg(val),2) as average_val
+from duplicate
+group by col;
+
+alter table cabs
+add column ride_duration double;
+
+update cabs
+set ride_duration = 
+    timestampdiff(minute, pick_time,drop_time);
+
+alter table cabs
+add column p_time varchar(50),
+add column d_time varchar(50);
+
+select case when 
+
+
 -- ==========================================
 -- Bivariate analysis of the data
 -- ==========================================
