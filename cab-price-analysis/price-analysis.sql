@@ -21,17 +21,15 @@ select count(*) as row_count,
 from train;
 # Rows - 1048575 , Columns - 17
 
-
 select count(distinct id) from train;
 # There is no column with duplicate id
 
 create table cabs as
     select * from train;
 
-
 select * from cabs;
 
-
+-- Rename all the columns
 alter table cabs
 change column `ID` id bigint,
 change column `vendor+af8-id` vendor_id text,
@@ -50,38 +48,30 @@ change column `extra+af8-charges` extra_charges text,
 change column `improvement+af8-charge` improvement_charge text,
 change column `total+af8-amount` total_amount text;
 
-
 select * from cabs;
 
-
+-- Fix Wrong values and filling those with null values, and changing the data type
 update cabs
 set driver_tip = null
 where driver_tip not regexp '^[0-9]+(\.[0-9]+)?$';
 
-
 alter table cabs
 modify driver_tip double;
-
 
 update cabs
 set mta_tax = null
 where mta_tax not regexp '^[0-9]+(\.[0-9]+)?$';
 
-
 alter table cabs
 modify mta_tax double;
-
 
 update cabs
 set pick_time = str_to_date(pick_time,'%m/%d/%Y %h:%i:%s %p'),
     drop_time = str_to_date(drop_time,'%m/%d/%Y %h:%i:%s %p');
 
-
 alter table cabs
 modify drop_time datetime,
 modify pick_time datetime;
-
-
 
 update cabs
 set toll_amount = null
@@ -90,14 +80,12 @@ where toll_amount not regexp '^[0-9]+(\.[0-9]+)?$';
 alter table cabs
 modify toll_amount double;
 
-
 update cabs
 set extra_charges = null
 where extra_charges not regexp '^[0-9]+(\.[0-9]+)?$';
 
 alter table cabs
 modify extra_charges double;
-
 
 update cabs
 set improvement_charge = null
@@ -106,7 +94,6 @@ where improvement_charge not regexp '^[0-9]+(\.[0-9]+)?$';
 alter table cabs
 modify improvement_charge double;
 
-
 update cabs
 set total_amount = null
 where total_amount not regexp '^[0-9]+(\.[0-9]+)?$';
@@ -114,9 +101,9 @@ where total_amount not regexp '^[0-9]+(\.[0-9]+)?$';
 alter table cabs
 modify total_amount double;
 
-
 alter table cabs
 modify payment_method varchar(50);
+
 update cabs
 set payment_method = 
     case 
@@ -128,10 +115,8 @@ set payment_method =
     when payment_method = 6 then 'void trip'
     end;
 
-
 alter table cabs
 modify rate_code varchar(50);
-
 
 update cabs
 set rate_code = 
@@ -145,24 +130,25 @@ set rate_code =
         else 'others'
     end;
 
-
 select * from cabs;
 
-
+-- Checking unique values of each categorical type columns
 select count(distinct vendor_id) as vendor_id,
     count(distinct pickup_loc) as pickup_loc,
     count(distinct drop_loc) as drop_loc,
     count(distinct mta_tax) as mta_tax,
+    count(distinct passenger_nums) as passenger_nums,
     count(distinct toll_amount) as toll_amount,
     count(distinct payment_method) as payment_method,
     count(distinct rate_code) as rate_code,
-    count(distinct extra_charges) as extra_charges
+    count(distinct stored_flag) as stored_flag,
+    count(distinct extra_charges) as extra_charges,
+    count(distinct improvement_charge) as improvement_charge
 from cabs;
-
 
 select * from cabs;
 
-
+-- Check null values of each column
 select sum(id is null) as id,
 sum(vendor_id is null) as vendor_id,
 sum(pickup_loc is null) as pick_loc,
@@ -182,47 +168,94 @@ sum(improvement_charge is null) as improvement_charge,
 sum(total_amount is null) as total_amount
 from cabs;
 
+--Checking some of the null valued rows where null count is low
+select * from cabs
+where 
+pickup_loc is null or 
+drop_loc is null or
+driver_tip is null or
+distance is null or
+pick_time is null or
+drop_time is null or
+passenger_nums is null or
+toll_amount is null or
+payment_method is null or
+stored_flag is null;
+# Id 599121 have most columns null and unknown vendor id too, the whole row needs to be removed
+# Other problematic columns have some specific values which are important for analysis so we can not remove those values.
+# Need to fill those value using some imputation methods
 
+-- Delete disputed row
 delete from cabs
-    where
-    pickup_loc is null;
-
+    where `id`= 599121;
 
 select * from cabs;
 
+-- ==========================================
+-- Univariate analysis of the data and remaining cleanings
+-- ==========================================
 
-select distinct vendor_id from cabs;
+with duplicate as(
+    select 'driver_tip' as col, driver_tip as val from cabs
+    union all
+    select 'distance',distance from cabs
+    union all
+    select 'toll_amount',toll_amount from cabs
+    union all
+    select 'extra_charges',extra_charges from cabs
+    union all
+    select 'total_amount',total_amount from cabs
+) select 
+col,
+max(val) as max_val, 
+min(val) as min_val, 
+round(avg(val),2) as average_val
+from duplicate
+group by col;
+# Minimum value of these columns are 0 and  
+# Mean is also close to 0 than max...we will impute the nulls with 0
 
-select distinct mta_tax from cabs;
+-- Filling out null values with 0
+update cabs
+set driver_tip = 0
+where driver_tip is null;
 
 update cabs
-set mta_tax = 0
-    where mta_tax is null;
+set distance = 0
+where distance is null;
 
+update cabs
+set toll_amount = 0
+where toll_amount is null;
 
-select min(distance) as minimum, max(distance) as maximum from cabs;
+update cabs
+set extra_charges = 0
+where extra_charges is null;
 
+update cabs
+set total_amount = 0
+where total_amount is null;
 
-select min(passenger_nums) as minimum, max(passenger_nums) as maximum from cabs;
+with duplicate as (
+    select 'mta_tax' as col,mta_tax as val from cabs
+    union all
+    select 'improvement_charge', improvement_charge from cabs
+) select col,val,count(val) as `count`
+from duplicate 
+group by col,val;
+# As we have seen, both these tax have values as 0.5 and 0.3 as highest count, we will replace nulls using those
 
+update cabs
+set mta_tax = 0.5
+where mta_tax is null;
 
-select min(toll_amount) as minimum, max(toll_amount) as maximum from cabs;
-
-
-
-select distinct payment_method from cabs;
-
-
-select distinct rate_code from cabs;
-
-select distinct stored_flag from cabs;
-
-
-select min(extra_charges) as charge,min(improvement_charge) as improve , min(total_amount) as amount from cabs;
-
+update cabs
+set improvement_charge = 0.3
+where improvement_charge is null;
 
 select * from cabs;
 
+-- Checking null values again
 select sum(id is null) as id,
 sum(vendor_id is null) as vendor_id,
 sum(pickup_loc is null) as pick_loc,
@@ -242,18 +275,129 @@ sum(improvement_charge is null) as improvement_charge,
 sum(total_amount is null) as total_amount
 from cabs;
 
+-- Count of distinct values in each column
+select count(distinct vendor_id) as vendor_id,
+    count(distinct pickup_loc) as pickup_loc,
+    count(distinct drop_loc) as drop_loc,
+    count(distinct driver_tip) as driver_tip,
+    count(distinct mta_tax) as mta_tax,
+    count(distinct passenger_nums) as passenger_nums,
+    count(distinct distance) as distance,
+    count(distinct pick_time) as pick_time,
+    count(distinct drop_time) as drop_time,
+    count(distinct passenger_nums) as passenger_nums,
+    count(distinct toll_amount) as toll_amount,
+    count(distinct payment_method) as payment_method,
+    count(distinct rate_code) as rate_code,
+    count(distinct stored_flag) as stored_flag,
+    count(distinct extra_charges) as extra_charges,
+    count(distinct improvement_charge) as improvement_charge,
+    count(distinct total_amount) as total_amount
+from cabs;
 
+select distinct extra_charges from cabs;
 
--- ==========================================
--- Modifying the data
--- ==========================================
+select extra_charges,round(100*(count(*)/(select count(*) from cabs)),5) as percentage
+from cabs
+group by extra_charges;
 
+-- Dropping unnecessay column
+alter table cabs
+drop column mta_tax,
+drop column improvement_charge;
 
+alter table cabs
+drop column id;
 
+select * from cabs;
 
--- ==========================================
--- Univariate analysis of the data
--- ==========================================
+describe cabs;
+
+select 
+vendor_id,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as percentage
+from cabs
+group by vendor_id;
+
+select 
+passenger_nums,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by passenger_nums
+order by `total_count` desc;
+
+select 
+payment_method,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by payment_method
+order by `total_count` desc;
+
+select 
+rate_code,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by rate_code
+order by `total_count` desc;
+
+select 
+stored_flag,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by stored_flag
+order by `total_count` desc;
+# Unncessary column with partial to one value, remove it
+
+alter table cabs
+drop column stored_flag;
+
+select 
+extra_charges,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by extra_charges
+order by `total_count` desc;
+# Extra charges have some values which can be classified as text, so we convert this column to text
+
+update cabs
+set extra_charges = 2
+where extra_charges > 1;
+
+alter table cabs
+modify column extra_charges varchar(20);
+
+update cabs
+set extra_charges = '1+'
+where extra_charges = '2';
+
+select 
+extra_charges,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by extra_charges
+order by `total_count` desc;
+
+update cabs
+set extra_charges = 0
+where extra_charges = '0.8' or
+extra_charges = '0.05' or
+extra_charges = '0.2' or
+extra_charges = '0.1' ;
+
+select 
+extra_charges,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by extra_charges
+order by `total_count` desc;
 
 -- ==========================================
 -- Bivariate analysis of the data
