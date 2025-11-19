@@ -444,13 +444,187 @@ alter table cabs
 add column p_time varchar(50),
 add column d_time varchar(50);
 
-select case when 
+select * from cabs;
+
+update cabs
+set p_time = 
+    case
+    when hour(pick_time) between 5 and 8 then 'morning'
+    when hour(pick_time) between 9 and 12 then 'late_morning'
+    when hour(pick_time) between 13 and 16 then 'afternoon'
+    when hour(pick_time) between 17 and 20 then 'evening'
+    when hour(pick_time) between 21 and 23 then 'night'
+    when hour(pick_time) between 0 and 4 then 'midnight'
+end;
+
+update cabs
+set d_time = 
+    case
+    when hour(drop_time) between 5 and 8 then 'morning'
+    when hour(drop_time) between 9 and 12 then 'late_morning'
+    when hour(drop_time) between 13 and 16 then 'afternoon'
+    when hour(drop_time) between 17 and 20 then 'evening'
+    when hour(drop_time) between 21 and 23 then 'night'
+    when hour(drop_time) between 0 and 4 then 'midnight'
+end;
+
+select * from cabs;
+
+update cabs
+set pick_time = date(pick_time);
+
+alter table cabs
+modify pick_time date;
+
+update cabs
+set drop_time = date(drop_time);
+
+alter table cabs
+modify drop_time date;
+
+with duplicate as(
+    select 'pick_time' as time, pick_time as val from cabs
+    union all
+    select 'drop_time',drop_time from cabs
+)
+select time, min(val) as minimum,max(val) as maximum
+from duplicate
+group by time;
+
+describe cabs;
+
+alter table cabs
+rename column pick_time to pickup_date,
+rename column drop_time to drop_date,
+rename column p_time to pickup_time,
+rename column d_time to drop_time;
+
+select min(ride_duration) as minimum, 
+max(ride_duration) as maximum,
+round(avg(ride_duration),2) as average
+from cabs;
+
+select 
+pickup_time,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by pickup_time
+order by `total_count` desc;
+
+select 
+drop_time,
+count(*) as total_count, 
+concat(round(100*count(*)/(select count(*) from cabs),2),"%") as `percentage`
+from cabs
+group by drop_time
+order by `total_count` desc;
 
 
 -- ==========================================
 -- Bivariate analysis of the data
 -- ==========================================
 
+select 
+vendor_id,
+min(total_amount) as min_amount,
+max(total_amount) as max_amount,
+round(sum(total_amount),2) as total_amount,
+round(avg(total_amount),2) as average_amount
+from cabs
+group by vendor_id
+order by vendor_id;
+
+select 
+passenger_nums,
+min(total_amount) as min_amount,
+max(total_amount) as max_amount,
+round(sum(total_amount),2) as total_amount,
+round(avg(total_amount),2) as average_amount,
+count(total_amount) as `count`
+from cabs
+group by passenger_nums
+order by passenger_nums;
+
+select 
+payment_method,
+min(total_amount) as min_amount,
+max(total_amount) as max_amount,
+round(sum(total_amount),2) as total_amount,
+round(avg(total_amount),2) as average_amount,
+count(total_amount) as `count`
+from cabs
+group by payment_method
+order by payment_method;
+
+select 
+rate_code,
+min(total_amount) as min_amount,
+max(total_amount) as max_amount,
+round(sum(total_amount),2) as total_amount,
+round(avg(total_amount),2) as average_amount,
+count(total_amount) as `count`
+from cabs
+group by rate_code
+order by rate_code;
+
+select 
+pickup_time,
+min(total_amount) as min_amount,
+max(total_amount) as max_amount,
+round(sum(total_amount),2) as total_amount,
+round(avg(total_amount),2) as average_amount,
+count(total_amount) as `count`
+from cabs
+group by pickup_time
+order by pickup_time;
+
+select 
+drop_time,
+min(total_amount) as min_amount,
+max(total_amount) as max_amount,
+round(sum(total_amount),2) as total_amount,
+round(avg(total_amount),2) as average_amount,
+count(total_amount) as `count`
+from cabs
+group by drop_time
+order by drop_time;
+
+select 
+dayname(pickup_date) as day_name,
+min(total_amount) as min_amount,
+max(total_amount) as max_amount,
+round(sum(total_amount),2) as total_amount,
+round(avg(total_amount),2) as average_amount,
+count(total_amount) as `count`
+from cabs
+group by dayname(pickup_date)
+order by dayname(pickup_date);
+
+select 
+dayname(drop_date) as day_name,
+min(total_amount) as min_amount,
+max(total_amount) as max_amount,
+round(sum(total_amount),2) as total_amount,
+round(avg(total_amount),2) as average_amount,
+count(total_amount) as `count`
+from cabs
+group by dayname(drop_date)
+order by dayname(drop_date);
+
+alter table cabs
+drop column pickup_loc,
+drop column drop_loc;
+
+select * from cabs;
+
+select
+    sum(case when toll_amount = 0 then 1 else 0 end) as no_toll,
+    sum(case when toll_amount != 0 then 1 else 0 end) as toll
+from cabs; 
+
 -- ==========================================
 -- Multivariate analysis of the data
 -- ==========================================
+
+
