@@ -132,6 +132,14 @@ set rate_code =
 
 select * from cabs;
 
+with duplicate as
+(select *, 
+row_number() over(partition by vendor_id,pickup_loc,drop_loc,driver_tip,mta_tax,distance,pick_time,drop_time,passenger_nums,toll_amount,
+                                payment_method,rate_code,stored_flag,extra_charges,improvement_charge,total_amount) as rn
+from cabs)
+select * from duplicate
+where rn > 1;
+
 -- Checking unique values of each categorical type columns
 select count(distinct vendor_id) as vendor_id,
     count(distinct pickup_loc) as pickup_loc,
@@ -311,6 +319,7 @@ drop column id;
 
 select * from cabs;
 
+
 describe cabs;
 
 select 
@@ -471,7 +480,7 @@ end;
 select * from cabs;
 
 update cabs
-set pick_time = date(pick_time);
+set pick_time = date(pick_time);    
 
 alter table cabs
 modify pick_time date;
@@ -623,8 +632,12 @@ select
     sum(case when toll_amount != 0 then 1 else 0 end) as toll
 from cabs; 
 
--- ==========================================
--- Multivariate analysis of the data
--- ==========================================
+select * from cabs;
 
-
+with duplicate as
+(select *, 
+row_number() over(partition by vendor_id,driver_tip,distance,pickup_date,drop_date,passenger_nums,toll_amount,
+                                payment_method,rate_code,extra_charges,total_amount,ride_duration,pickup_time,drop_time) as rn
+from cabs)
+select * from duplicate
+where rn > 1;
