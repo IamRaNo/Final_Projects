@@ -480,7 +480,7 @@ end;
 select * from cabs;
 
 update cabs
-set pick_time = date(pick_time);    
+set pick_time = date(pick_time);
 
 alter table cabs
 modify pick_time date;
@@ -501,6 +501,8 @@ from duplicate
 group by time;
 
 describe cabs;
+
+select * from cabs;
 
 alter table cabs
 rename column pick_time to pickup_date,
